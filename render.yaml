@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: moneyup-n16-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /tmp/moneyup-data

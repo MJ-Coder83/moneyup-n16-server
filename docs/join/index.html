@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Join Online Room — MONEY UP • Pitching Pennies N16</title>
+  <meta name="description" content="You're invited to pitch £1 coins at the Chaucer Court brick wall in Hackney N16!" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="MONEY UP • Pitching Pennies N16" />
+  <meta property="og:title" content="Join Online Match — MONEY UP • Chaucer Court N16" />
+  <meta property="og:description" content="Tap to get the Room Code and pitch against the Chaucer Court red-brick wall!" />
+  <meta property="og:url" content="https://mj-coder83.github.io/moneyup-n16-server/join/" />
+  <meta property="og:image" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
+  <meta property="og:image:secure_url" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Join Online Match — MONEY UP • Chaucer Court N16" />
+  <meta name="twitter:description" content="Tap to get the Room Code and pitch against the Chaucer Court red-brick wall!" />
+  <meta name="twitter:image" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
+  <style>
+    :root { --bg:#071326; --card:#0d2444; --royal:#1474e0; --gold:#fac602; --emerald:#53ce17; --text:#ffffff; --silver:#b8c7e0; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:radial-gradient(circle at top, #12366b 0%, #061020 75%); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card { width:100%; max-width:560px; background:var(--card); border:3px solid var(--royal); border-radius:24px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.55); }
+    .hero { width:100%; aspect-ratio:1200/630; object-fit:cover; display:block; border-bottom:3px solid var(--gold); }
+    .body { padding:22px; }
+    .pill { display:inline-block; background:var(--gold); color:#1a1004; font-weight:800; font-size:12px; letter-spacing:1px; padding:5px 12px; border-radius:999px; margin-bottom:10px; text-transform:uppercase; }
+    h1 { font-size:24px; line-height:1.2; margin-bottom:8px; }
+    p.desc { color:var(--silver); font-size:15px; line-height:1.45; margin-bottom:18px; }
+    .code-box { background:#061224; border:2px solid var(--royal); border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+    .code-val { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:26px; font-weight:900; letter-spacing:2px; color:var(--gold); }
+    button.btn { background:var(--emerald); color:#071b04; border:none; border-radius:12px; padding:11px 16px; font-weight:900; font-size:14px; cursor:pointer; }
+    .steps { font-size:14px; color:var(--silver); line-height:1.55; background:#091b36; padding:14px; border-radius:14px; }
+    .steps b { color:#fff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="hero" src="../assets/og-moneyup-n16.jpg" alt="MONEY UP Pitching Pennies N16" />
+    <div class="body">
+      <div class="pill">Online Room Invite • Chaucer Court N16</div>
+      <h1 id="headline">Join Online Match — MONEY UP N16</h1>
+      <p class="desc" id="subtext">Open Money Up N16 on Android and enter this room code in the ONLINE tab to play!</p>
+      <div class="code-box" id="codeBox">
+        <span class="code-val" id="codeVal">AB12CD</span>
+        <button class="btn" id="copyBtn" onclick="copyCode()">COPY ROOM</button>
+      </div>
+      <div class="steps">
+        <b>Quick Join Steps:</b><br/>
+        1. Tap <b>COPY ROOM</b> above<br/>
+        2. Open <b>MONEY UP (Pitching Pennies N16)</b><br/>
+        3. Tap <b>ONLINE</b> → paste the code → tap <b>JOIN ROOM</b>!
+      </div>
+    </div>
+  </div>
+  <script>
+    const q = new URLSearchParams(window.location.search);
+    const room = (q.get("room") || q.get("code") || "").trim().toUpperCase();
+    const from = (q.get("from") || "").trim();
+    const stake = (q.get("stake") || "").trim();
+    if (room) {
+      document.getElementById("codeVal").textContent = room;
+      document.getElementById("headline").textContent = (from || "An N16 Pitcher") + " invited you! Room " + room;
+    }
+    if (stake) {
+      document.getElementById("subtext").textContent = "Stake: " + stake + " per throw • Paste Room Code " + (room || "from link") + " into ONLINE.";
+    }
+    function copyCode() {
+      const val = document.getElementById("codeVal").textContent;
+      if (navigator.clipboard) navigator.clipboard.writeText(val);
+      document.getElementById("copyBtn").textContent = "COPIED!";
+    }
+  </script>
+</body>
+</html>
