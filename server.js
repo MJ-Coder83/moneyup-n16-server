@@ -100,6 +100,9 @@ function isOnline(lastSeen) {
 }
 
 function sanitizeProfile(p) {
+  const badges = Array.isArray(p.pinned_badges)
+    ? p.pinned_badges.map((b) => String(b)).filter(Boolean).slice(0, 3)
+    : [];
   return {
     friend_code: p.friend_code,
     name: String(p.name || "PITCHER").slice(0, 16),
@@ -114,6 +117,9 @@ function sanitizeProfile(p) {
     jingles_won: Number(p.jingles_won || 0),
     rounds_won: Number(p.rounds_won || 0),
     throws: Number(p.throws || 0),
+    ach_points: Number(p.ach_points || 0),
+    ach_unlocked: Number(p.ach_unlocked || 0),
+    pinned_badges: badges,
     borough: String(p.borough || "Chaucer Court, N16"),
     last_seen: Number(p.last_seen || Date.now()),
     online: isOnline(p.last_seen)
@@ -298,6 +304,8 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, {
       ok: true,
       service: "moneyup-n16",
+      version: "2.0.0",
+      data_dir: DATA_DIR,
       uptime: Math.round(process.uptime()),
       counts: {
         profiles: Object.keys(db.profiles).length,
@@ -331,6 +339,10 @@ const server = http.createServer(async (req, res) => {
     let code = normalizeFriendCode(body.friend_code);
     if (!code) code = generateFriendCode();
     const prev = db.profiles[code] || {};
+    const badgesRaw = Array.isArray(body.pinned_badges)
+      ? body.pinned_badges
+      : (Array.isArray(prev.pinned_badges) ? prev.pinned_badges : []);
+    const badges = badgesRaw.map((b) => String(b)).filter(Boolean).slice(0, 3);
     const merged = {
       friend_code: code,
       name: String(body.name || prev.name || "PITCHER").trim().slice(0, 16) || "PITCHER",
@@ -345,12 +357,52 @@ const server = http.createServer(async (req, res) => {
       jingles_won: Math.max(Number(body.jingles_won ?? 0), Number(prev.jingles_won ?? 0)),
       rounds_won: Math.max(Number(body.rounds_won ?? 0), Number(prev.rounds_won ?? 0)),
       throws: Math.max(Number(body.throws ?? 0), Number(prev.throws ?? 0)),
+      ach_points: Math.max(Number(body.ach_points ?? 0), Number(prev.ach_points ?? 0)),
+      ach_unlocked: Math.max(Number(body.ach_unlocked ?? 0), Number(prev.ach_unlocked ?? 0)),
+      pinned_badges: badges,
       borough: String(body.borough || prev.borough || "Chaucer Court, N16"),
       last_seen: Date.now()
     };
     db.profiles[code] = merged;
     saveDb();
     return sendJson(res, 200, { ok: true, profile: sanitizeProfile(merged) });
+  }
+
+  // 3b. Search Registered Players (by Friend Code or Callsign)
+  if (req.method === "GET" && pathname === "/api/players/search") {
+    const qRaw = String(reqUrl.searchParams.get("q") || "").trim();
+    const qUpper = qRaw.toUpperCase();
+    const qNormCode = normalizeFriendCode(qRaw);
+    const myCode = normalizeFriendCode(reqUrl.searchParams.get("code") || "");
+    const results = [];
+    for (const code of Object.keys(db.profiles)) {
+      if (myCode && code === myCode) continue;
+      const prof = db.profiles[code];
+      if (!prof || prof.is_npc) continue;
+      const nameStr = String(prof.name || "").toUpperCase();
+      const matched = !qRaw
+        || code.includes(qUpper)
+        || (qNormCode && code.includes(qNormCode))
+        || nameStr.includes(qUpper);
+      if (!matched) continue;
+      let relationship = "none";
+      if (myCode) {
+        const f = findFriendship(myCode, code);
+        if (f) {
+          if (f.status === "accepted") relationship = "friend";
+          else if (f.status === "pending") relationship = f.requester === myCode ? "outgoing" : "incoming";
+        }
+      }
+      results.push({
+        ...sanitizeProfile(prof),
+        relationship
+      });
+    }
+    results.sort((a, b) => {
+      if (a.online !== b.online) return a.online ? -1 : 1;
+      return Number(b.last_seen || 0) - Number(a.last_seen || 0);
+    });
+    return sendJson(res, 200, { ok: true, players: results.slice(0, 12) });
   }
 
   // 4. Profile Heartbeat
@@ -415,31 +467,77 @@ const server = http.createServer(async (req, res) => {
     const [a, b] = getPairKey(myCode, targetCode);
     const existingIdx = db.friendships.findIndex((f) => f.a === a && f.b === b);
 
+    if (!db.profiles[myCode]) {
+      db.profiles[myCode] = {
+        friend_code: myCode,
+        name: "PITCHER",
+        avatar: "avatar_you",
+        title: "CURB SHARK",
+        rank: 1,
+        xp: 0,
+        crowns: 0,
+        winnings: 0,
+        best_dist: 99.0,
+        leaners: 0,
+        jingles_won: 0,
+        rounds_won: 0,
+        throws: 0,
+        ach_points: 0,
+        ach_unlocked: 0,
+        pinned_badges: [],
+        borough: "Chaucer Court, N16",
+        last_seen: Date.now()
+      };
+    }
+
     if (action === "request") {
       if (!db.profiles[targetCode]) {
-        return sendJson(res, 404, { ok: false, error: "No pitcher found with code " + targetCode });
+        return sendJson(res, 404, {
+          ok: false,
+          error: "No pitcher found with code " + targetCode + ". Ask them to open Money Up first!"
+        });
       }
+      const targetName = String(db.profiles[targetCode].name || targetCode);
       if (existingIdx >= 0) {
         const ex = db.friendships[existingIdx];
         if (ex.status === "pending" && ex.requester !== myCode) {
           ex.status = "accepted";
           ex.updated_at = Date.now();
           saveDb();
-          return sendJson(res, 200, { ok: true, status: "accepted", target_code: targetCode });
+          return sendJson(res, 200, {
+            ok: true,
+            status: "accepted",
+            target_code: targetCode,
+            message: `Added ${targetName} (${targetCode}) to Friends!`
+          });
         }
-        return sendJson(res, 200, { ok: true, status: ex.status, target_code: targetCode });
+        const msg = ex.status === "accepted"
+          ? `Already friends with ${targetName} (${targetCode})`
+          : `Friend request already pending with ${targetName} (${targetCode})`;
+        return sendJson(res, 200, { ok: true, status: ex.status, target_code: targetCode, message: msg });
       }
       db.friendships.push({ a, b, status: "pending", requester: myCode, created_at: Date.now(), updated_at: Date.now() });
       saveDb();
-      return sendJson(res, 200, { ok: true, status: "pending", target_code: targetCode });
+      return sendJson(res, 200, {
+        ok: true,
+        status: "pending",
+        target_code: targetCode,
+        message: `Friend request sent to ${targetName} (${targetCode})!`
+      });
     }
 
     if (action === "accept") {
-      if (existingIdx < 0) return sendJson(res, 404, { ok: false, error: "Request not found" });
+      if (existingIdx < 0) return sendJson(res, 404, { ok: false, error: "Friend request not found" });
       db.friendships[existingIdx].status = "accepted";
       db.friendships[existingIdx].updated_at = Date.now();
       saveDb();
-      return sendJson(res, 200, { ok: true, status: "accepted", target_code: targetCode });
+      const targetName = db.profiles[targetCode] ? String(db.profiles[targetCode].name || targetCode) : targetCode;
+      return sendJson(res, 200, {
+        ok: true,
+        status: "accepted",
+        target_code: targetCode,
+        message: `Added ${targetName} (${targetCode}) to Friends!`
+      });
     }
 
     if (action === "decline" || action === "remove") {
@@ -447,7 +545,12 @@ const server = http.createServer(async (req, res) => {
         db.friendships.splice(existingIdx, 1);
         saveDb();
       }
-      return sendJson(res, 200, { ok: true, status: "removed", target_code: targetCode });
+      return sendJson(res, 200, {
+        ok: true,
+        status: "removed",
+        target_code: targetCode,
+        message: action === "remove" ? `Removed ${targetCode} from Friends` : `Cancelled request for ${targetCode}`
+      });
     }
 
     return sendJson(res, 400, { ok: false, error: "Unknown friend action" });
@@ -487,6 +590,34 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true, board, entries: entries.slice(0, limit) });
   }
 
+  // 9a. Open Public Lobbies (MUST be checked BEFORE /api/rooms/:code)
+  if (req.method === "GET" && pathname === "/api/rooms/open") {
+    const myCode = normalizeFriendCode(reqUrl.searchParams.get("code"));
+    const now = Date.now();
+    const rooms = [];
+    for (const code of Object.keys(db.rooms)) {
+      const r = db.rooms[code];
+      if (!r || r.status !== "lobby" || r.is_public === false || now - r.updated_at > 1800000) continue;
+      if (r.players.length >= 4) continue;
+      if (myCode && r.host_code === myCode) continue;
+      const hostPlayer = r.players[0] || {};
+      rooms.push({
+        code: r.code,
+        host_code: r.host_code,
+        host_name: hostPlayer.name || r.host_code,
+        host_avatar: hostPlayer.avatar || "avatar_you",
+        players_count: r.players.length,
+        coin_worth: r.coin_worth,
+        currency: r.currency,
+        total_rounds: r.total_rounds,
+        throws_per_round: r.throws_per_round,
+        scoring_mode: r.scoring_mode,
+        share_url: `${origin}/join/${r.code}`
+      });
+    }
+    return sendJson(res, 200, { ok: true, rooms });
+  }
+
   // 9. Room Invites (MUST be checked BEFORE /api/rooms/:code)
   if (req.method === "GET" && pathname === "/api/rooms/invites") {
     const myCode = normalizeFriendCode(reqUrl.searchParams.get("code"));
@@ -510,10 +641,12 @@ const server = http.createServer(async (req, res) => {
           code: r.code,
           host_code: r.host_code,
           host_name: hostPlayer.name || r.host_code,
+          host_avatar: hostPlayer.avatar || "avatar_you",
           players_count: r.players.length,
           coin_worth: r.coin_worth,
           currency: r.currency,
           total_rounds: r.total_rounds,
+          throws_per_round: r.throws_per_round,
           scoring_mode: r.scoring_mode,
           share_url: `${origin}/join/${r.code}`
         });
@@ -539,14 +672,18 @@ const server = http.createServer(async (req, res) => {
     if (action === "create") {
       if (!playerCode) return sendJson(res, 400, { ok: false, error: "Missing friend_code" });
       const prof = db.profiles[playerCode] || {};
+      if (db.profiles[playerCode]) db.profiles[playerCode].last_seen = Date.now();
       const hostName = String(body.name || prof.name || "HOST").slice(0, 16);
       const hostAvatar = String(body.avatar || prof.avatar || "avatar_you");
       const code = generateRoomCode();
       const now = Date.now();
+      const inRules = (body.rules && typeof body.rules === "object") ? body.rules : {};
       const room = {
         code,
         host_code: playerCode,
         status: "lobby",
+        is_public: body.is_public !== false,
+        match_seed: crypto.randomInt(1, 2147483647),
         round: 1,
         total_rounds: Math.max(1, Math.min(20, Number(body.total_rounds || 5))),
         throws_per_round: Math.max(1, Math.min(10, Number(body.throws_per_round || 1))),
@@ -554,6 +691,16 @@ const server = http.createServer(async (req, res) => {
         currency: String(body.currency || "£"),
         scoring_mode: String(body.scoring_mode || "tips"),
         invited_code: normalizeFriendCode(body.invited_code || ""),
+        rules: {
+          valid_throw: inRules.valid_throw !== false,
+          wall_lean: inRules.wall_lean !== false,
+          lean_wins_round: inRules.lean_wins_round !== false,
+          carry_on_after_leaner: Boolean(inRules.carry_on_after_leaner),
+          dead_on: inRules.dead_on !== false,
+          knockout: Boolean(inRules.knockout),
+          wind_factor: Boolean(inRules.wind_factor),
+          wind_strength: Number(inRules.wind_strength ?? 0.5)
+        },
         turn_idx: 0,
         seq: 0,
         players: [{ friend_code: playerCode, name: hostName, avatar: hostAvatar, is_host: true }],
@@ -574,6 +721,7 @@ const server = http.createServer(async (req, res) => {
 
     if (action === "join") {
       if (!playerCode) return sendJson(res, 400, { ok: false, error: "Missing friend_code" });
+      if (db.profiles[playerCode]) db.profiles[playerCode].last_seen = Date.now();
       const existing = room.players.find((p) => p.friend_code === playerCode);
       if (!existing) {
         if (room.status !== "lobby") {
@@ -599,6 +747,9 @@ const server = http.createServer(async (req, res) => {
       if (room.host_code !== playerCode) {
         return sendJson(res, 403, { ok: false, error: "Only host can start match" });
       }
+      if (!Array.isArray(room.players) || room.players.length < 2) {
+        return sendJson(res, 400, { ok: false, error: "Need at least 2 players to start an online match" });
+      }
       room.status = "playing";
       room.seq += 1;
       room.events.push({ seq: room.seq, type: "match_started", player_code: playerCode, ts: Date.now() });
@@ -615,6 +766,7 @@ const server = http.createServer(async (req, res) => {
         round: Number(body.round || room.round),
         player_code: playerCode,
         player_idx: Number(body.player_idx ?? 0),
+        throw_num: Number(body.throw_num || 1),
         power: Number(body.power ?? 0.2),
         aim_x: Number(body.aim_x ?? 0.0),
         arc_idx: Number(body.arc_idx ?? 1),
@@ -622,6 +774,7 @@ const server = http.createServer(async (req, res) => {
         result: Number(body.result ?? 1),
         hit_wall: Boolean(body.hit_wall),
         final_pos: Array.isArray(body.final_pos) ? body.final_pos : [0, 0.06, 0.5],
+        final_rot: Array.isArray(body.final_rot) ? body.final_rot : [0, 0, 0],
         ts: Date.now()
       };
       room.events.push(ev);
@@ -637,9 +790,17 @@ const server = http.createServer(async (req, res) => {
       const ev = {
         seq: room.seq,
         type: action,
+        round: Number(body.round || room.round),
+        turn_idx: Number(body.turn_idx ?? 0),
         player_code: playerCode,
         face: String(body.face || "heads"),
         power: Number(body.power ?? 0.45),
+        drag_x: Number(body.drag_x ?? 0.0),
+        drag_y: Number(body.drag_y ?? 160.0),
+        spin_y: Number(body.spin_y ?? 0.0),
+        flip_spin: Number(body.flip_spin ?? 0.0),
+        coin_faces: Array.isArray(body.coin_faces) ? body.coin_faces : [],
+        coin_positions: Array.isArray(body.coin_positions) ? body.coin_positions : [],
         won: Number(body.won ?? 0),
         result: String(body.result || ""),
         ts: Date.now()
@@ -661,11 +822,31 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, room });
     }
 
+    if (action === "finish") {
+      room.status = "finished";
+      room.updated_at = Date.now();
+      saveDb();
+      return sendJson(res, 200, { ok: true, room });
+    }
+
     if (action === "leave") {
+      const leavingP = room.players.find((p) => p.friend_code === playerCode);
+      const leavingName = leavingP ? String(leavingP.name || playerCode) : playerCode;
       room.players = room.players.filter((p) => p.friend_code !== playerCode);
       if (room.players.length === 0) {
         delete db.rooms[roomCode];
       } else {
+        if (room.status === "playing") {
+          room.seq += 1;
+          room.events.push({
+            seq: room.seq,
+            type: "player_left",
+            player_code: playerCode,
+            name: leavingName,
+            ts: Date.now()
+          });
+          if (room.events.length > 120) room.events = room.events.slice(-120);
+        }
         if (room.host_code === playerCode) {
           room.host_code = room.players[0].friend_code;
           room.players[0].is_host = true;
