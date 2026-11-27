@@ -705,6 +705,7 @@ const server = http.createServer(async (req, res) => {
         seq: 0,
         players: [{ friend_code: playerCode, name: hostName, avatar: hostAvatar, is_host: true }],
         events: [],
+        accepted_events: {}, // Durable receipts survive pruning of the replay history.
         created_at: now,
         updated_at: now
       };
@@ -751,12 +752,53 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { ok: false, error: "Need at least 2 players to start an online match" });
       }
       room.status = "playing";
+      room.match_player_count = room.players.length;
       room.seq += 1;
       room.events.push({ seq: room.seq, type: "match_started", player_code: playerCode, ts: Date.now() });
       room.updated_at = Date.now();
       saveDb();
       return sendJson(res, 200, { ok: true, room });
     }
+
+    const isMatchEvent = action === "throw" || action === "jingles_call" || action === "jingles_result";
+    let receiptKey = "";
+    if (isMatchEvent) {
+      if (!room.players.some((p) => p.friend_code === playerCode)) {
+        return sendJson(res, 403, { ok: false, error: "Player is not in this room" });
+      }
+      const eventId = String(body.event_id || "");
+      if (eventId.length > 160) {
+        return sendJson(res, 400, { ok: false, error: "event_id is too long" });
+      }
+      if (eventId) {
+        receiptKey = JSON.stringify([playerCode, eventId]);
+        const prior = (room.accepted_events || {})[receiptKey];
+        if (prior) {
+          if (prior.type !== action) {
+            return sendJson(res, 409, { ok: false, error: "event_id already used for another action" });
+          }
+          // A lost response may be retried even after the match has finished.
+          return sendJson(res, 200, { ok: true, room, event: prior, duplicate: true });
+        }
+      }
+      if (room.status !== "playing") {
+        return sendJson(res, 409, { ok: false, error: "Match is not playing" });
+      }
+      // Gameplay indexes remain stable when a player leaves the room roster.
+      const playerCount = room.match_player_count || room.players.length;
+      if (action === "throw" && body.floor_owners !== undefined &&
+          (!Array.isArray(body.floor_owners) || body.floor_owners.length > playerCount * room.throws_per_round ||
+           body.floor_owners.some((owner) => !Number.isInteger(owner) || owner < 0 || owner >= playerCount))) {
+        return sendJson(res, 400, { ok: false, error: "Invalid floor coin ownership" });
+      }
+    }
+    const rememberEvent = (ev) => {
+      if (!receiptKey) return;
+      room.accepted_events ||= {};
+      room.accepted_events[receiptKey] = {
+        seq: ev.seq, type: ev.type, player_code: ev.player_code, event_id: ev.event_id
+      };
+    };
 
     if (action === "throw") {
       room.seq += 1;
@@ -775,9 +817,12 @@ const server = http.createServer(async (req, res) => {
         hit_wall: Boolean(body.hit_wall),
         final_pos: Array.isArray(body.final_pos) ? body.final_pos : [0, 0.06, 0.5],
         final_rot: Array.isArray(body.final_rot) ? body.final_rot : [0, 0, 0],
+        floor_owners: Array.isArray(body.floor_owners) ? body.floor_owners : [],
+        event_id: String(body.event_id || ""),
         ts: Date.now()
       };
       room.events.push(ev);
+      rememberEvent(ev);
       if (room.events.length > 120) room.events = room.events.slice(-120);
       room.turn_idx = (room.turn_idx + 1) % Math.max(1, room.players.length);
       room.updated_at = Date.now();
@@ -792,6 +837,8 @@ const server = http.createServer(async (req, res) => {
         type: action,
         round: Number(body.round || room.round),
         turn_idx: Number(body.turn_idx ?? 0),
+        toss_id: Number(body.toss_id ?? 0),
+        event_id: String(body.event_id || ""),
         player_code: playerCode,
         face: String(body.face || "heads"),
         power: Number(body.power ?? 0.45),
@@ -803,6 +850,42 @@ const server = http.createServer(async (req, res) => {
         coin_positions: Array.isArray(body.coin_positions) ? body.coin_positions : [],
         won: Number(body.won ?? 0),
         result: String(body.result || ""),
+        ts: Date.now()
+      };
+      room.events.push(ev);
+      rememberEvent(ev);
+      if (room.events.length > 120) room.events = room.events.slice(-120);
+      room.updated_at = Date.now();
+      saveDb();
+      return sendJson(res, 200, { ok: true, room, event: ev });
+    }
+
+    if (action === "emote") {
+      const sender = room.players.find((p) => p.friend_code === playerCode);
+      if (!sender) {
+        return sendJson(res, 403, { ok: false, error: "Player is not in this room" });
+      }
+      if (room.status !== "playing") {
+        return sendJson(res, 409, { ok: false, error: "Match is not playing" });
+      }
+      const emoteText = String(body.emote_text || "").trim().toUpperCase().slice(0, 24);
+      if (!emoteText) {
+        return sendJson(res, 400, { ok: false, error: "Emote text cannot be empty" });
+      }
+      const emoteIcon = String(body.emote_icon || "emote_fire").trim().slice(0, 24);
+      const accentHex = String(body.accent_hex || "#FAC602").trim().slice(0, 12);
+      const sfxIdx = Math.max(0, Math.min(5, Number.isFinite(Number(body.sfx_idx)) ? Math.trunc(Number(body.sfx_idx)) : 0));
+      room.seq += 1;
+      const ev = {
+        seq: room.seq,
+        type: "emote",
+        player_code: playerCode,
+        sender_name: String(sender.name || "Pitcher").trim() || "Pitcher",
+        emote_text: emoteText,
+        emote_icon: emoteIcon,
+        accent_hex: accentHex,
+        sfx_idx: sfxIdx,
+        event_id: String(body.event_id || ""),
         ts: Date.now()
       };
       room.events.push(ev);

@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Join Online Room — MONEY UP • Pitching Pennies N16</title>
-  <meta name="description" content="You're invited to pitch £1 coins at the Chaucer Court brick wall in Hackney N16!" />
+  <meta name="description" content="You're invited to pitch £1 coins at the Chaucer Court brick wall in Hackney N16! Play right in your browser or on Android." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="MONEY UP • Pitching Pennies N16" />
   <meta property="og:title" content="Join Online Match — MONEY UP • Chaucer Court N16" />
-  <meta property="og:description" content="Tap to get the Room Code and pitch against the Chaucer Court red-brick wall!" />
+  <meta property="og:description" content="Tap to jump straight into the Chaucer Court red-brick wall match in your browser or Android app!" />
   <meta property="og:url" content="https://mj-coder83.github.io/moneyup-n16-server/join/" />
   <meta property="og:image" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
   <meta property="og:image:secure_url" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
@@ -17,7 +17,7 @@
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Join Online Match — MONEY UP • Chaucer Court N16" />
-  <meta name="twitter:description" content="Tap to get the Room Code and pitch against the Chaucer Court red-brick wall!" />
+  <meta name="twitter:description" content="Tap to play right in your browser or join with the Room Code at Chaucer Court N16!" />
   <meta name="twitter:image" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
   <style>
     :root { --bg:#071326; --card:#0d2444; --royal:#1474e0; --gold:#fac602; --emerald:#53ce17; --text:#ffffff; --silver:#b8c7e0; }
@@ -28,10 +28,13 @@
     .body { padding:22px; }
     .pill { display:inline-block; background:var(--gold); color:#1a1004; font-weight:800; font-size:12px; letter-spacing:1px; padding:5px 12px; border-radius:999px; margin-bottom:10px; text-transform:uppercase; }
     h1 { font-size:24px; line-height:1.2; margin-bottom:8px; }
-    p.desc { color:var(--silver); font-size:15px; line-height:1.45; margin-bottom:18px; }
+    p.desc { color:var(--silver); font-size:15px; line-height:1.45; margin-bottom:16px; }
+    a.play-cta { display:block; width:100%; text-align:center; text-decoration:none; background:linear-gradient(180deg, #6be329 0%, #3fb10d 100%); color:#061b03; font-weight:900; font-size:18px; letter-spacing:0.6px; padding:16px 20px; border-radius:16px; border:2px solid #b5ff7c; box-shadow:0 8px 24px rgba(83,206,23,0.35); margin-bottom:14px; transition:transform 0.1s ease; }
+    a.play-cta:active { transform:scale(0.98); }
     .code-box { background:#061224; border:2px solid var(--royal); border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
     .code-val { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:26px; font-weight:900; letter-spacing:2px; color:var(--gold); }
-    button.btn { background:var(--emerald); color:#071b04; border:none; border-radius:12px; padding:11px 16px; font-weight:900; font-size:14px; cursor:pointer; }
+    button.btn { background:var(--royal); color:#ffffff; border:none; border-radius:12px; padding:11px 16px; font-weight:900; font-size:14px; cursor:pointer; }
+    button.btn:active { transform:scale(0.97); }
     .steps { font-size:14px; color:var(--silver); line-height:1.55; background:#091b36; padding:14px; border-radius:14px; }
     .steps b { color:#fff; }
   </style>
@@ -42,30 +45,33 @@
     <div class="body">
       <div class="pill">Online Room Invite • Chaucer Court N16</div>
       <h1 id="headline">Join Online Match — MONEY UP N16</h1>
-      <p class="desc" id="subtext">Open Money Up N16 on Android and enter this room code in the ONLINE tab to play!</p>
+      <p class="desc" id="subtext">Tap Play Now to auto-join in your browser (iPhone, Android &amp; Desktop) — no download needed — or copy the room code for the Android app.</p>
+      <a class="play-cta" id="playNowBtn" href="../play/">▶ PLAY NOW IN BROWSER</a>
       <div class="code-box" id="codeBox">
         <span class="code-val" id="codeVal">AB12CD</span>
         <button class="btn" id="copyBtn" onclick="copyCode()">COPY ROOM</button>
       </div>
       <div class="steps">
-        <b>Quick Join Steps:</b><br/>
-        1. Tap <b>COPY ROOM</b> above<br/>
-        2. Open <b>MONEY UP (Pitching Pennies N16)</b><br/>
-        3. Tap <b>ONLINE</b> → paste the code → tap <b>JOIN ROOM</b>!
+        <b>Two ways to join:</b><br/>
+        • <b>Browser (Instant):</b> Tap <b>PLAY NOW IN BROWSER</b> above — it enters the room code automatically!<br/>
+        • <b>Android App:</b> Tap <b>COPY ROOM</b> → open <b>MONEY UP N16</b> → <b>ONLINE</b> → paste &amp; join.
       </div>
     </div>
   </div>
   <script>
     const q = new URLSearchParams(window.location.search);
-    const room = (q.get("room") || q.get("code") || "").trim().toUpperCase();
+    const room = (q.get("room") || q.get("code") || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
     const from = (q.get("from") || "").trim();
     const stake = (q.get("stake") || "").trim();
+    const playBtn = document.getElementById("playNowBtn");
     if (room) {
       document.getElementById("codeVal").textContent = room;
       document.getElementById("headline").textContent = (from || "An N16 Pitcher") + " invited you! Room " + room;
+      playBtn.href = "../play/?room=" + encodeURIComponent(room);
+      playBtn.textContent = "▶ JOIN ROOM " + room + " IN BROWSER";
     }
     if (stake) {
-      document.getElementById("subtext").textContent = "Stake: " + stake + " per throw • Paste Room Code " + (room || "from link") + " into ONLINE.";
+      document.getElementById("subtext").textContent = "Stake: " + stake + " per throw • Tap Join in Browser for instant play, or paste Room " + (room || "from link") + " into the Android app.";
     }
     function copyCode() {
       const val = document.getElementById("codeVal").textContent;

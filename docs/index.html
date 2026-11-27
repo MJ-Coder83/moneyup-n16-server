@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MONEY UP — Pitching Pennies • Chaucer Court N16</title>
-  <meta name="description" content="Pitch £1 coins against the Chaucer Court red-brick wall in Hackney N16! Challenge friends online, play Pass &amp; Play, land 45° Wall Leaners &amp; shake Jingles." />
+  <meta name="description" content="Pitch £1 coins against the Chaucer Court red-brick wall in Hackney N16! Play right in your browser on any device, challenge friends online, land 45° Wall Leaners &amp; shake Jingles." />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="MONEY UP • Pitching Pennies N16" />
   <meta property="og:title" content="MONEY UP — Pitching Pennies • Chaucer Court N16" />
-  <meta property="og:description" content="Tap to join me at Chaucer Court (Shakespeare Walk, N16)! Pitch £1 coins at the wall, land 45° Leaners &amp; call Jingles Heads or Tails." />
+  <meta property="og:description" content="Tap to play at Chaucer Court (Shakespeare Walk, N16) in your browser or Android app! Pitch £1 coins at the wall, land 45° Leaners &amp; call Jingles." />
   <meta property="og:url" content="https://mj-coder83.github.io/moneyup-n16-server/" />
   <meta property="og:image" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
   <meta property="og:image:secure_url" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
@@ -17,7 +17,7 @@
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="MONEY UP — Pitching Pennies • Chaucer Court N16" />
-  <meta name="twitter:description" content="Tap to join me at Chaucer Court N16! Real 3D wall pitching, Jingles &amp; Pass &amp; Play." />
+  <meta name="twitter:description" content="Play right in your browser! Real 3D Chaucer Court wall pitching, Jingles &amp; Online Rooms." />
   <meta name="twitter:image" content="https://mj-coder83.github.io/moneyup-n16-server/assets/og-moneyup-n16.jpg" />
   <style>
     :root { --bg:#071326; --card:#0d2444; --royal:#1474e0; --gold:#fac602; --emerald:#53ce17; --text:#ffffff; --silver:#b8c7e0; }
@@ -28,10 +28,12 @@
     .body { padding:22px; }
     .pill { display:inline-block; background:var(--gold); color:#1a1004; font-weight:800; font-size:12px; letter-spacing:1px; padding:5px 12px; border-radius:999px; margin-bottom:10px; text-transform:uppercase; }
     h1 { font-size:24px; line-height:1.2; margin-bottom:8px; }
-    p.desc { color:var(--silver); font-size:15px; line-height:1.45; margin-bottom:18px; }
+    p.desc { color:var(--silver); font-size:15px; line-height:1.45; margin-bottom:16px; }
+    a.play-cta { display:block; width:100%; text-align:center; text-decoration:none; background:linear-gradient(180deg, #6be329 0%, #3fb10d 100%); color:#061b03; font-weight:900; font-size:18px; letter-spacing:0.6px; padding:16px 20px; border-radius:16px; border:2px solid #b5ff7c; box-shadow:0 8px 24px rgba(83,206,23,0.35); margin-bottom:14px; transition:transform 0.1s ease; }
+    a.play-cta:active { transform:scale(0.98); }
     .code-box { background:#061224; border:2px solid var(--royal); border-radius:16px; padding:14px 16px; display:none; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
     .code-val { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:26px; font-weight:900; letter-spacing:2px; color:var(--gold); }
-    button.btn { background:var(--emerald); color:#071b04; border:none; border-radius:12px; padding:11px 16px; font-weight:900; font-size:14px; cursor:pointer; }
+    button.btn { background:var(--royal); color:#ffffff; border:none; border-radius:12px; padding:11px 16px; font-weight:900; font-size:14px; cursor:pointer; }
     button.btn:active { transform:scale(0.97); }
     .steps { font-size:14px; color:var(--silver); line-height:1.55; background:#091b36; padding:14px; border-radius:14px; }
     .steps b { color:#fff; }
@@ -43,26 +45,27 @@
     <div class="body">
       <div class="pill" id="badge">Chaucer Court • Shakespeare Walk N16</div>
       <h1 id="headline">MONEY UP — Pitching Pennies N16</h1>
-      <p class="desc" id="subtext">Real 3D wall pitching at Milton Gardens Estate, Hackney N16. Play Pass &amp; Play, vs CPU, Jingles, or Online Rooms with friends!</p>
+      <p class="desc" id="subtext">Real 3D wall pitching at Milton Gardens Estate, Hackney N16. Play instantly in your browser on iPhone, Android or Desktop — Pass &amp; Play, vs CPU, Jingles &amp; Online Rooms!</p>
+      <a class="play-cta" id="playNowBtn" href="./play/">▶ PLAY NOW IN BROWSER</a>
       <div class="code-box" id="codeBox">
         <span class="code-val" id="codeVal">N16-0000</span>
         <button class="btn" id="copyBtn" onclick="copyCode()">COPY CODE</button>
       </div>
       <div class="steps">
-        <b>How to join on Android:</b><br/>
-        1. Open <b>MONEY UP (Pitching Pennies N16)</b><br/>
-        2. Tap <b>FRIENDS</b> or <b>ONLINE</b> at the bottom of the Home Screen<br/>
-        3. Enter the code above (or host/join a Pass &amp; Play / Online match)!
+        <b>Play anywhere:</b><br/>
+        • <b>Web (All Devices):</b> Tap <b>PLAY NOW IN BROWSER</b> above — add to Home Screen for full-screen app mode.<br/>
+        • <b>Android App:</b> Open <b>MONEY UP N16</b> → tap <b>FRIENDS</b> or <b>ONLINE</b> to enter the code above.
       </div>
     </div>
   </div>
   <script>
     const q = new URLSearchParams(window.location.search);
-    const room = (q.get("room") || "").trim().toUpperCase();
-    const fcode = (q.get("code") || "").trim().toUpperCase();
+    const room = (q.get("room") || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+    const fcode = (q.get("code") || q.get("friend") || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 12);
     const from = (q.get("from") || "").trim();
     const stake = (q.get("stake") || "").trim();
     const activeCode = room || fcode;
+    const playBtn = document.getElementById("playNowBtn");
     if (activeCode) {
       document.getElementById("codeBox").style.display = "flex";
       document.getElementById("codeVal").textContent = activeCode;
@@ -70,11 +73,15 @@
     if (room) {
       document.getElementById("badge").textContent = "Online Match Invite • Chaucer Court N16";
       document.getElementById("headline").textContent = (from || "An N16 Pitcher") + " challenged you! Room " + room;
-      document.getElementById("subtext").textContent = "Stake: " + (stake || "£1.00") + " • Copy Room Code " + room + " and paste it into the ONLINE tab in Money Up.";
+      document.getElementById("subtext").textContent = "Stake: " + (stake || "£1.00") + " • Tap Join in Browser for instant play, or paste Room " + room + " into the Android app.";
+      playBtn.href = "./play/?room=" + encodeURIComponent(room);
+      playBtn.textContent = "▶ JOIN ROOM " + room + " IN BROWSER";
     } else if (fcode) {
       document.getElementById("badge").textContent = "Friend Invite • Hackney N16";
       document.getElementById("headline").textContent = "Add " + (from || fcode) + " (" + fcode + ") on Money Up!";
-      document.getElementById("subtext").textContent = "Copy Friend Code " + fcode + " and enter it inside the FRIENDS tab in Money Up N16.";
+      document.getElementById("subtext").textContent = "Tap Play Now in Browser to pre-fill " + fcode + " in FRIENDS, or copy the code into the Android app.";
+      playBtn.href = "./play/?friend=" + encodeURIComponent(fcode);
+      playBtn.textContent = "▶ PLAY & ADD " + fcode + " IN BROWSER";
     }
     function copyCode() {
       const val = document.getElementById("codeVal").textContent;
