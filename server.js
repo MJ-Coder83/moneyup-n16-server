@@ -678,12 +678,17 @@ const server = http.createServer(async (req, res) => {
       const code = generateRoomCode();
       const now = Date.now();
       const inRules = (body.rules && typeof body.rules === "object") ? body.rules : {};
+      const rawSc = Number(body.shot_clock_sec ?? 20);
+      const cleanSc = [0, 20, 30].includes(rawSc) ? rawSc : 20;
       const room = {
         code,
         host_code: playerCode,
         status: "lobby",
         is_public: body.is_public !== false,
         match_seed: crypto.randomInt(1, 2147483647),
+        shot_clock_sec: cleanSc,
+        rematch_count: 0,
+        rematch_votes: [],
         round: 1,
         total_rounds: Math.max(1, Math.min(20, Number(body.total_rounds || 5))),
         throws_per_round: Math.max(1, Math.min(10, Number(body.throws_per_round || 1))),
@@ -910,6 +915,58 @@ const server = http.createServer(async (req, res) => {
       room.updated_at = Date.now();
       saveDb();
       return sendJson(res, 200, { ok: true, room });
+    }
+
+    if (action === "rematch_vote") {
+      if (!room.players.some((p) => p.friend_code === playerCode)) {
+        return sendJson(res, 403, { ok: false, error: "Player is not in this room" });
+      }
+      if (!Array.isArray(room.rematch_votes)) room.rematch_votes = [];
+      if (!room.rematch_votes.includes(playerCode)) room.rematch_votes.push(playerCode);
+      room.updated_at = Date.now();
+      saveDb();
+      return sendJson(res, 200, { ok: true, room });
+    }
+
+    if (action === "rematch") {
+      if (room.host_code !== playerCode) {
+        return sendJson(res, 403, { ok: false, error: "Only the host can trigger a rematch" });
+      }
+      if (room.players.length < 2) {
+        return sendJson(res, 400, { ok: false, error: "Need at least 2 players for a rematch" });
+      }
+      const prevSeed = Number(room.match_seed || 0);
+      let newSeed = Math.floor(Math.random() * 2147483645) + 1;
+      if (newSeed === prevSeed) newSeed = (newSeed % 2147483644) + 1;
+      const doubleStakes = Boolean(body.double_stakes);
+      let curWorth = Math.max(0.5, Number(room.coin_worth || 1.0));
+      if (doubleStakes) {
+        curWorth = Math.min(100.0, Math.round(curWorth * 2.0 * 2.0) / 2.0);
+        room.coin_worth = curWorth;
+      }
+      room.match_seed = newSeed;
+      room.rematch_count = Number(room.rematch_count || 0) + 1;
+      room.rematch_votes = [];
+      room.round = 1;
+      room.turn_idx = 0;
+      room.status = "playing";
+      room.match_player_count = room.players.length;
+      room.accepted_events = {};
+      room.seq += 1;
+      const remEv = {
+        seq: room.seq,
+        type: "match_rematch",
+        player_code: playerCode,
+        match_seed: newSeed,
+        coin_worth: curWorth,
+        double_stakes: doubleStakes,
+        rematch_count: room.rematch_count,
+        ts: Date.now()
+      };
+      room.events = [remEv];
+      room.updated_at = Date.now();
+      saveDb();
+      return sendJson(res, 200, { ok: true, room, event: remEv });
     }
 
     if (action === "leave") {
