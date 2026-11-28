@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1795858376|90821899';
+const CACHE_VERSION = '1795870533|55379598';
 /** @type {string} */
 const CACHE_PREFIX = 'Money Up-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
@@ -32,8 +32,8 @@ self.addEventListener('activate', (event) => {
 		}
 	).then(function () {
 		// Enable navigation preload if available.
-		return (('navigationPreload' in self.registration) ? self.registration.navigationPreload.enable() : Promise.resolve()).then(() => self.clients.claim());
-	}));
+		return ('navigationPreload' in self.registration) ? self.registration.navigationPreload.enable() : Promise.resolve();
+	}).then(() => self.clients.claim()));
 });
 
 /**
